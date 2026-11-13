@@ -1,0 +1,12 @@
+# never commit MALT data or anything transcript-derived
+*.parquet
+data/
+transcripts*/
+out/runs/
+*.jsonl
+*.key
+.hf_token
+api/
+venv/
+__pycache__/
+*.pyc
