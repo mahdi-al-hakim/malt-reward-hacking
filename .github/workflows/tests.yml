@@ -26,4 +26,8 @@ jobs:
           for v in (q["original_rescored"]["auroc"], q["quiet"]["auroc"], q["auroc_drop"]["value"],
                     q["quiet_clean_only"]["auroc"]):
               assert f"{v:.3f}" in readme, v
+          f = json.load(open("results/quiet_full.json", encoding="utf-8"))["monitors"]
+          for m in f.values():
+              for v in (m["original"]["auroc"], m["quiet"]["auroc"], m["drop"]["value"]):
+                  assert f"{v:.3f}" in readme, v
           PY

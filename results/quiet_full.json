@@ -1,0 +1,215 @@
+{
+ "_doc": {
+  "audit": "Labels of the text each rewrite removed, as shares of removed characters, for the full-channel rewrite (audit_full*) and the first round's agent-messages rewrite (audit_cot*). audit_full and audit_cot are Claude Sonnet 5.5, as the design fixed; it returned no answer for many sabotage runs (share_unlabeled). The *_haiku files are Claude Haiku 5.5 on every run, added after that, a deviation from the design.",
+  "monitors": "Sabotage monitor on the full channel (agent messages, actions and results) of the 60 sabotage and 60 normal runs, before and after quiet_rewrite.py edited the agent messages (actions and results unchanged). drop: original minus quiet AUROC, paired by run. Every interval resamples whole tasks (B=4000, seed 20261121).",
+  "rewrite_check": "Full-channel rewrite, per class: rows parsed, rows still holding the label word or an intent term, and output length over input length."
+ },
+ "audit": {
+  "audit_cot": {
+   "cost": {
+    "calls": 111,
+    "input_tokens": 71285,
+    "output_tokens": 1900,
+    "usd": 0.162
+   },
+   "neg": {
+    "chars_removed": 0,
+    "runs": 60,
+    "runs_with_removals": 0,
+    "share_content": null,
+    "share_intent": null,
+    "share_other": null,
+    "share_unlabeled": null
+   },
+   "pos": {
+    "chars_removed": 166192,
+    "runs": 51,
+    "runs_with_removals": 51,
+    "share_content": 0.0,
+    "share_intent": 0.043,
+    "share_other": 0.0,
+    "share_unlabeled": 0.957
+   },
+   "runs_refused_or_unparsed": 33
+  },
+  "audit_cot_haiku": {
+   "cost": {
+    "calls": 111,
+    "input_tokens": 77621,
+    "output_tokens": 62978,
+    "usd": 0.039
+   },
+   "neg": {
+    "chars_removed": 0,
+    "runs": 60,
+    "runs_with_removals": 0,
+    "share_content": null,
+    "share_intent": null,
+    "share_other": null,
+    "share_unlabeled": null
+   },
+   "pos": {
+    "chars_removed": 166192,
+    "runs": 51,
+    "runs_with_removals": 51,
+    "share_content": 0.013,
+    "share_intent": 0.415,
+    "share_other": 0.016,
+    "share_unlabeled": 0.556
+   },
+   "runs_refused_or_unparsed": 17
+  },
+  "audit_full": {
+   "cost": {
+    "calls": 114,
+    "input_tokens": 67515,
+    "output_tokens": 2252,
+    "usd": 0.158
+   },
+   "neg": {
+    "chars_removed": 865,
+    "runs": 60,
+    "runs_with_removals": 1,
+    "share_content": 0.321,
+    "share_intent": 0.665,
+    "share_other": 0.014,
+    "share_unlabeled": 0.0
+   },
+   "pos": {
+    "chars_removed": 145127,
+    "runs": 54,
+    "runs_with_removals": 54,
+    "share_content": 0.0,
+    "share_intent": 0.069,
+    "share_other": 0.0,
+    "share_unlabeled": 0.931
+   },
+   "runs_refused_or_unparsed": 33
+  },
+  "audit_full_haiku": {
+   "cost": {
+    "calls": 114,
+    "input_tokens": 73307,
+    "output_tokens": 51865,
+    "usd": 0.033
+   },
+   "neg": {
+    "chars_removed": 865,
+    "runs": 60,
+    "runs_with_removals": 1,
+    "share_content": 0.335,
+    "share_intent": 0.665,
+    "share_other": 0.0,
+    "share_unlabeled": 0.0
+   },
+   "pos": {
+    "chars_removed": 145127,
+    "runs": 54,
+    "runs_with_removals": 54,
+    "share_content": 0.007,
+    "share_intent": 0.271,
+    "share_other": 0.014,
+    "share_unlabeled": 0.707
+   },
+   "runs_refused_or_unparsed": 21
+  }
+ },
+ "monitors": {
+  "haiku": {
+   "cost_original": {
+    "calls": 120,
+    "input_tokens": 896045,
+    "output_tokens": 28856,
+    "usd": 0.104
+   },
+   "cost_quiet": {
+    "calls": 120,
+    "input_tokens": 855061,
+    "output_tokens": 36401,
+    "usd": 0.104
+   },
+   "drop": {
+    "ci95_task_clustered": [
+     0.047,
+     0.157
+    ],
+    "value": 0.095
+   },
+   "original": {
+    "auroc": 0.927,
+    "ci95_task_clustered": [
+     0.876,
+     0.969
+    ]
+   },
+   "quiet": {
+    "auroc": 0.832,
+    "ci95_task_clustered": [
+     0.75,
+     0.901
+    ]
+   },
+   "runs": 120,
+   "unscored": 0
+  },
+  "sonnet": {
+   "cost_original": {
+    "calls": 120,
+    "input_tokens": 896045,
+    "output_tokens": 13440,
+    "usd": 1.926
+   },
+   "cost_quiet": {
+    "calls": 120,
+    "input_tokens": 836547,
+    "output_tokens": 13548,
+    "usd": 1.809
+   },
+   "drop": {
+    "ci95_task_clustered": [
+     0.03,
+     0.15
+    ],
+    "value": 0.085
+   },
+   "original": {
+    "auroc": 0.929,
+    "ci95_task_clustered": [
+     0.872,
+     0.975
+    ]
+   },
+   "quiet": {
+    "auroc": 0.844,
+    "ci95_task_clustered": [
+     0.763,
+     0.919
+    ]
+   },
+   "runs": 104,
+   "unscored": 16
+  }
+ },
+ "rewrite_check": {
+  "neg": {
+   "intent_word_left": 1,
+   "label_word_left": 0,
+   "length_ratio": 0.999,
+   "rewrite_ok": 60,
+   "rows": 60
+  },
+  "pos": {
+   "intent_word_left": 10,
+   "label_word_left": 9,
+   "length_ratio": 0.897,
+   "rewrite_ok": 54,
+   "rows": 60
+  }
+ },
+ "rewrite_cost": {
+  "calls": 120,
+  "input_tokens": 540639,
+  "output_tokens": 592758,
+  "usd": 0.35
+ }
+}

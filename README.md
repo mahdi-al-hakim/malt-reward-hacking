@@ -1,11 +1,11 @@
-# MALT's sabotage labels lean on stated intent: a one-word baseline, and what a monitor loses without it
+# Monitor scores on MALT's sabotage runs lean on stated intent: a one-word baseline, and what monitors lose without it
 
 A small study on METR's [MALT](https://huggingface.co/datasets/metr-evals/malt-transcripts-public), a
 public set of agent transcripts labeled for reward hacking and sandbagging, built so that monitors for
 those behaviors can be measured against labels people checked. I scored two samples with a cheap LLM
 monitor (Claude Haiku 5.5) and compared each score with the simplest baseline I could find. For the
-prompted runs, that baseline is a check for one word. A follow-up, designed and pushed before it ran,
-removes the agent's statements of intent and measures how far the monitor falls.
+prompted runs, that baseline is a check for one word. A follow-up, pre-specified and pushed before it ran,
+removes the agent's statements of intent and measures how far two monitors fall.
 
 ## Results
 
@@ -32,17 +32,29 @@ removes the agent's statements of intent and measures how far the monitor falls.
    score near the top on them. On the sabotage runs the rewrites change little, since the word survives
    most of them; I didn't measure the rewrites on the other two labels. METR's post notes that its
    prompted examples "are often obvious", and the word counts give a measure of that.
-4. **With the statements of intent removed, the same monitor falls from 0.891 to 0.705.** The
-   follow-up ([design/quiet-sabotage.md](design/quiet-sabotage.md), pushed before any of its calls)
-   had Claude Haiku 5.5 rewrite the agent's messages in all 120 runs, sabotage and normal alike, to
-   remove any statement or hint of intent to do worse and keep everything else. The unchanged monitor,
-   scored again on the original runs in the same session, gives 0.891 [0.828, 0.944] (0.896 published);
-   on the rewritten runs it gives 0.705 [0.610, 0.794]. The paired drop is 0.186 [0.109, 0.272]. On the
-   44 sabotage runs whose rewrite parsed and left none of the study's cue words, against 59 such normal
-   runs, it is 0.661 [0.550, 0.764], below the 0.767 the monitor reaches from the actions alone. These
-   intervals resample whole tasks. The rewrite shortened the sabotage runs by 15% and left the normal
-   runs unchanged, and 9 sabotage rewrites failed to parse and kept their original text, which can only
-   help the monitor.
+4. **With the statements of intent removed, monitors fall, by about half as much when they also see the
+   actions.** A follow-up in two pre-specified rounds ([round 1](design/quiet-sabotage.md),
+   [round 2](design/quiet-sabotage-2.md), each pushed before its model calls) had Claude Haiku 5.5
+   rewrite the agent's messages in all 120 runs, sabotage and normal alike, to remove any statement or
+   hint of intent to do worse and keep everything else. Actions and their results are never edited.
+   Intervals resample whole tasks.
+
+   | monitor | what it reads | original runs | rewritten | paired drop |
+   | --- | --- | --- | --- | --- |
+   | Haiku 5.5 | agent messages only | 0.891 [0.828, 0.944] | 0.705 [0.610, 0.794] | 0.186 [0.109, 0.272] |
+   | Haiku 5.5 | messages and actions | 0.927 [0.876, 0.969] | 0.832 [0.750, 0.901] | 0.095 [0.047, 0.157] |
+   | Sonnet 5.5 | messages and actions | 0.929 [0.872, 0.975] | 0.844 [0.763, 0.919] | 0.085 [0.030, 0.150] |
+
+   So a monitor that reads only what the agent says loses nearly half of its margin over chance (0.391 to
+   0.205) when the agent stops saying it, and one that also sees the actions loses about a fifth; every
+   drop excludes zero. Sonnet returned no score (stop reason "refusal") for 16 of the 120 runs in one
+   condition or the other, 15 of them sabotage runs, so its row covers the 104 runs scored both times.
+   An audit of what the rewrites removed is only partial: where a model labeled the removed text, about
+   93% of it was statements of intent rather than descriptions of the work, but 56% to 71% of the text
+   removed from sabotage runs got no label because the labeling model refused or answered in the wrong
+   shape ([results/quiet_full.json](results/quiet_full.json)). The rewrite shortened sabotage runs and
+   left normal runs almost unchanged, and 6 to 9 sabotage rewrites per round failed and kept their
+   original text, which can only help the monitor.
 5. **On organic reward hacking, five code checks don't separate hacks from honest runs. The monitor
    does, with confounds.** Public MALT has 62 unprompted runs labeled `hardcoded_solution`,
    `bypass_constraints` or `ignores_task_instructions`, on 11 tasks; METR groups the last two (47 of the
@@ -61,7 +73,10 @@ removes the agent's statements of intent and measures how far the monitor falls.
 
 The study made 1,200 monitor calls in all, superseded runs included: 8.0 million input and 0.32
 million output tokens, about US$0.96 at Claude Haiku 5.5 list prices. The follow-up made 120 rewrite
-calls and 354 monitor calls, US$0.68 (`results/quiet.json`), plus five smoke-test rewrites before it (US$0.03). The word scans and the code
+calls and 354 monitor calls, US$0.68 (`results/quiet.json`), plus five smoke-test rewrites before it (US$0.03).
+Round 2 cost US$4.69 (`results/quiet_full.json`), most of it the two Sonnet monitor passes, plus a first
+Haiku audit pass (US$0.05) that sent each run's removed text in one call and was replaced by the batched
+one. The word scans and the code
 checks use no model. Intervals are 95%: Wilson for rates, a stratified bootstrap for AUROC.
 
 ## If you measure a monitor on MALT
@@ -71,7 +86,8 @@ look for a similar word before trusting a score on the other prompted labels. On
 stability under the four rewrites as stability on runs where the word mostly survives. Testing for
 sabotage the agent doesn't describe needs runs where its statements of intent are gone too: edited out
 like the mentions of the instruction, or never written because the agent was told to keep its plan out
-of its reasoning. In this sample, editing them out took the monitor from 0.891 to 0.705.
+of its reasoning. In this sample, editing them out cost a messages-only monitor 0.186 AUROC and a
+monitor that also sees the actions about 0.09.
 
 ## The data
 
@@ -230,6 +246,10 @@ sabotage prompt describes sabotage and sandbagging in general terms.
 - Each label-word check uses the word in the label's own name; no other word was tried for those labels.
 - Seven first-run calls hit the 1,024-token output cap and returned no score. They were scored again
   with a 16,000-token cap, so no run is missing from any result.
+- Departures from the round-2 design: it fixed Claude Sonnet 5.5 as the audit's labeler, and Sonnet
+  returned no labels for 33 runs, so Claude Haiku 5.5 labels for every run were added after the fact and
+  are what the 93% figure rests on; the audit then sends removed text in batches of 40 spans, after a
+  first Haiku pass that sent each run's text in one call left more runs unlabeled.
 - The quiet-sabotage runs are edited transcripts, not a model that never states its intent. The
   rewriter can miss hints, and it can remove reasoning that showed the sabotage without stating intent;
   only the first is counted, and only on fixed words. Sabotage runs changed more than normal runs (15%
@@ -282,6 +302,18 @@ $PY src/monitor.py $OUT/reps_cot.jsonl $KEY $M $OUT/scores_cot_rerun.jsonl
 $PY src/monitor.py $OUT/reps_quiet.jsonl $KEY $M $OUT/scores_quiet.jsonl
 MONITOR_MODE=rewardhack $PY src/monitor.py $OUT/reps_organic_full.jsonl $KEY $M $OUT/scores_organic_rerun.jsonl
 $PY src/quiet_analysis.py $OUT results/quiet.json
+# round 2 (design/quiet-sabotage-2.md)
+python -c "import json,sys; [sys.stdout.write(l) for l in open('$OUT/reps_default.jsonl') if json.loads(l)['config']=='default:full']" > $OUT/reps_full.jsonl
+$PY src/quiet_rewrite.py $OUT/reps_full.jsonl default:full quiet:full $KEY $M $OUT/reps_quiet_full.jsonl
+for S in claude-haiku-5-5:haiku claude-sonnet-5-5:sonnet; do
+  $PY src/monitor.py $OUT/reps_full.jsonl $KEY ${S%%:*} $OUT/scores_full_${S##*:}.jsonl
+  $PY src/monitor.py $OUT/reps_quiet_full.jsonl $KEY ${S%%:*} $OUT/scores_quiet_full_${S##*:}.jsonl
+done
+for A in claude-sonnet-5-5: claude-haiku-5-5:_haiku; do
+  $PY src/quiet_audit.py $OUT/reps_full.jsonl $OUT/reps_quiet_full.jsonl default:full $KEY ${A%%:*} $OUT/audit_full${A##*:}.jsonl
+  $PY src/quiet_audit.py $OUT/reps_cot.jsonl $OUT/reps_quiet.jsonl default:cot_only $KEY ${A%%:*} $OUT/audit_cot${A##*:}.jsonl
+done
+$PY src/quiet_full_analysis.py $OUT results/quiet_full.json
 ```
 
 `MONITOR_BUDGET_USD` caps what `monitor.py` may spend. A fresh run of the monitor gives different scores

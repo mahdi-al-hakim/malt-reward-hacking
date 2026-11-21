@@ -88,7 +88,7 @@ res["rewrite_check"] = {k: dict(rows=c[(k, "rows")], rewrite_ok=c[(k, "ok")], la
 res["rewrite_cost"] = usage("reps_quiet_full.jsonl", "haiku")
 
 res["audit"] = {}
-for name in ("audit_full.jsonl", "audit_cot.jsonl"):
+for name in ("audit_full.jsonl", "audit_cot.jsonl", "audit_full_haiku.jsonl", "audit_cot_haiku.jsonl"):
     rows = jl(name)
     agg = {}
     for k in ("pos", "neg"):
@@ -98,7 +98,8 @@ for name in ("audit_full.jsonl", "audit_cot.jsonl"):
                       chars_removed=total,
                       **{f"share_{x}": round(sum(r[f"chars_{x}"] for r in rs) / total, 3) if total else None
                          for x in ("intent", "content", "other", "unlabeled")})
-    agg["cost"] = usage(name, "sonnet")
+    agg["cost"] = usage(name, "haiku" if "haiku" in name else "sonnet")
+    agg["runs_refused_or_unparsed"] = sum(bool(r.get("error")) for r in rows)
     res["audit"][name.split(".")[0]] = agg
 
 res["_doc"] = {
@@ -108,8 +109,11 @@ res["_doc"] = {
                 "interval resamples whole tasks (B=4000, seed 20261121).",
     "rewrite_check": "Full-channel rewrite, per class: rows parsed, rows still holding the label word or an "
                      "intent term, and output length over input length.",
-    "audit": "Claude Sonnet 5.5 labels of the text each rewrite removed, as shares of removed characters, for "
-             "the full-channel rewrite (audit_full) and the first round's agent-messages rewrite (audit_cot).",
+    "audit": "Labels of the text each rewrite removed, as shares of removed characters, for the full-channel "
+             "rewrite (audit_full*) and the first round's agent-messages rewrite (audit_cot*). audit_full and "
+             "audit_cot are Claude Sonnet 5.5, as the design fixed; it returned no answer for many sabotage "
+             "runs (share_unlabeled). The *_haiku files are Claude Haiku 5.5 on every run, added after that, "
+             "a deviation from the design.",
 }
 with open(out_json, "w", encoding="utf-8", newline="\n") as f:
     json.dump(res, f, indent=1, sort_keys=True)

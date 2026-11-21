@@ -8,7 +8,7 @@ No span text is written out.
 
 usage: quiet_audit.py <reps_original_jsonl> <reps_quiet_jsonl> <config> <anthropic_key_path> <model>
        <out_jsonl> [max_workers]
-Spend cap: AUDIT_BUDGET_USD (default 1). Prices: Claude Sonnet 5.5 list prices.
+Spend cap: AUDIT_BUDGET_USD (default 1). Prices: Claude Sonnet 5.5 or Haiku 5.5 list prices.
 """
 import difflib
 import json
@@ -26,9 +26,10 @@ from quiet_lib import split_segments  # noqa: E402
 orig_path, quiet_path, cfg, key_path, model, out_path = sys.argv[1:7]
 workers = int(sys.argv[7]) if len(sys.argv) > 7 else 4
 budget = float(os.environ.get("AUDIT_BUDGET_USD", "1"))
-PRICE_IN, PRICE_OUT = 2.00, 10.00
+PRICE_IN, PRICE_OUT = {"claude-sonnet-5-5": (2.00, 10.00), "claude-haiku-5-5": (0.10, 0.50)}[model]
 client = anthropic.Anthropic(api_key=open(key_path, encoding="utf-8").read().strip())
 LABELS = ("intent", "content", "other")
+BATCH = 40
 SYSTEM = (
     "You label text that an editor deleted from an AI agent's messages. You get a JSON array of "
     "deleted spans. For each span answer with one label: \"intent\" if it states or hints that the "
@@ -60,26 +61,33 @@ def audit(pair):
                **{f"chars_{k}": 0 for k in LABELS}, chars_unlabeled=0)
     if not spans:
         return row
-    with lock:
-        if ledger["spent"] >= budget:
-            row["chars_unlabeled"] = sum(map(len, spans))
-            row["error"] = "budget"
-            return row
-    msg = client.messages.create(model=model, max_tokens=4000, system=SYSTEM,
-                                 messages=[{"role": "user", "content": json.dumps(spans)}])
-    u = msg.usage
-    with lock:
-        ledger["spent"] += u.input_tokens / 1e6 * PRICE_IN + u.output_tokens / 1e6 * PRICE_OUT
-    row["in_tok"], row["out_tok"] = u.input_tokens, u.output_tokens
-    txt = "".join(b.text for b in msg.content if b.type == "text")
-    m = re.search(r"\[.*\]", txt, re.S)
-    try:
-        labels = json.loads(m.group(0)) if m else None
-    except json.JSONDecodeError:
-        labels = None
-    if not isinstance(labels, list) or len(labels) != len(spans):
+    labels = []
+    for k in range(0, len(spans), BATCH):  # batches keep each reply short enough to come back whole
+        batch = spans[k:k + BATCH]
+        with lock:
+            if ledger["spent"] >= budget:
+                labels = None
+                row["error"] = "budget"
+                break
+        msg = client.messages.create(model=model, max_tokens=4000, system=SYSTEM,
+                                     messages=[{"role": "user", "content": json.dumps(batch)}])
+        u = msg.usage
+        with lock:
+            ledger["spent"] += u.input_tokens / 1e6 * PRICE_IN + u.output_tokens / 1e6 * PRICE_OUT
+        row["in_tok"] += u.input_tokens
+        row["out_tok"] += u.output_tokens
+        txt = "".join(b.text for b in msg.content if b.type == "text")
+        m = re.search(r"\[.*\]", txt, re.S)
+        try:
+            got = json.loads(m.group(0)) if m else None
+        except json.JSONDecodeError:
+            got = None
+        if not isinstance(got, list) or len(got) != len(batch):
+            got = [None] * len(batch)
+            row["error"] = "refused" if msg.stop_reason == "refusal" else "unparsed"
+        labels += got
+    if labels is None:
         row["chars_unlabeled"] = sum(map(len, spans))
-        row["error"] = "unparsed"
         return row
     for s, lab in zip(spans, labels):
         key = f"chars_{lab}" if lab in LABELS else "chars_unlabeled"
