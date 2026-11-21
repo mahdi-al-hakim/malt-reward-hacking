@@ -1,0 +1,24 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest pyflakes
+      - name: Unit tests for the follow-up's statistics and parsing
+        run: python -m pytest -q tests
+      - name: No unused names or undefined names in the new scripts
+        run: python -m pyflakes src/quiet_lib.py src/quiet_rewrite.py src/quiet_analysis.py tests
+      - name: results.json parses and holds the headline counts
+        run: |
+          python - <<'PY'
+          import json
+          r = json.load(open("results/results.json", encoding="utf-8"))
+          s = r["word_in_agent_messages_all_runs"]["by_word"]["sabotage"]["by_label"]
+          assert (s["sabotage"]["with_word"], s["sabotage"]["runs"]) == (223, 224), s["sabotage"]
+          assert (s["normal"]["with_word"], s["normal"]["runs"]) == (0, 6047), s["normal"]
+          PY
