@@ -1,10 +1,11 @@
-# A one-word baseline for MALT's prompted runs, and a monitor on organic reward hacking
+# MALT's sabotage labels lean on stated intent: a one-word baseline, and what a monitor loses without it
 
 A small study on METR's [MALT](https://huggingface.co/datasets/metr-evals/malt-transcripts-public), a
 public set of agent transcripts labeled for reward hacking and sandbagging, built so that monitors for
 those behaviors can be measured against labels people checked. I scored two samples with a cheap LLM
 monitor (Claude Haiku 5.5) and compared each score with the simplest baseline I could find. For the
-prompted runs, that baseline is a check for one word.
+prompted runs, that baseline is a check for one word. A follow-up, designed and pushed before it ran,
+removes the agent's statements of intent and measures how far the monitor falls.
 
 ## Results
 
@@ -31,7 +32,18 @@ prompted runs, that baseline is a check for one word.
    score near the top on them. On the sabotage runs the rewrites change little, since the word survives
    most of them; I didn't measure the rewrites on the other two labels. METR's post notes that its
    prompted examples "are often obvious", and the word counts give a measure of that.
-4. **On organic reward hacking, five code checks don't separate hacks from honest runs. The monitor
+4. **With the statements of intent removed, the same monitor falls from 0.891 to 0.705.** The
+   follow-up ([design/quiet-sabotage.md](design/quiet-sabotage.md), pushed before any of its calls)
+   had Claude Haiku 5.5 rewrite the agent's messages in all 120 runs, sabotage and normal alike, to
+   remove any statement or hint of intent to do worse and keep everything else. The unchanged monitor,
+   scored again on the original runs in the same session, gives 0.891 [0.828, 0.944] (0.896 published);
+   on the rewritten runs it gives 0.705 [0.610, 0.794]. The paired drop is 0.186 [0.109, 0.272]. On the
+   44 sabotage runs whose rewrite parsed and left none of the study's cue words, against 59 such normal
+   runs, it is 0.661 [0.550, 0.764], below the 0.767 the monitor reaches from the actions alone. These
+   intervals resample whole tasks. The rewrite shortened the sabotage runs by 15% and left the normal
+   runs unchanged, and 9 sabotage rewrites failed to parse and kept their original text, which can only
+   help the monitor.
+5. **On organic reward hacking, five code checks don't separate hacks from honest runs. The monitor
    does, with confounds.** Public MALT has 62 unprompted runs labeled `hardcoded_solution`,
    `bypass_constraints` or `ignores_task_instructions`, on 11 tasks; METR groups the last two (47 of the
    62) as reward hacking. Against 52 normal runs on the same tasks, all reviewed by hand, five
@@ -43,10 +55,13 @@ prompted runs, that baseline is a check for one word.
    transcripts are much longer, so the monitor saw a median 2.3% of each hack against 13.8% of each
    control. On the 35 hacks from models that also have controls, AUROC is 0.832 [0.739, 0.912].
    The sample is also uneven by task: 39 of the 62 hacks come from two tasks that supply 7 of the 52
-   controls, so most hack-control pairs compare different tasks.
+   controls, so most hack-control pairs compare different tasks. In the follow-up, rescoring the
+   organic sample gave 0.852 [0.726, 0.937] with tasks resampled, and comparing each hack only with
+   controls from its own task gave 0.858 [0.722, 0.937], so the task imbalance doesn't account for it.
 
 The study made 1,200 monitor calls in all, superseded runs included: 8.0 million input and 0.32
-million output tokens, about US$0.96 at Claude Haiku 5.5 list prices. The word scans and the code
+million output tokens, about US$0.96 at Claude Haiku 5.5 list prices. The follow-up made 120 rewrite
+calls and 354 monitor calls, US$0.68 (`results/quiet.json`), plus five smoke-test rewrites before it (US$0.03). The word scans and the code
 checks use no model. Intervals are 95%: Wilson for rates, a stratified bootstrap for AUROC.
 
 ## If you measure a monitor on MALT
@@ -56,7 +71,7 @@ look for a similar word before trusting a score on the other prompted labels. On
 stability under the four rewrites as stability on runs where the word mostly survives. Testing for
 sabotage the agent doesn't describe needs runs where its statements of intent are gone too: edited out
 like the mentions of the instruction, or never written because the agent was told to keep its plan out
-of its reasoning.
+of its reasoning. In this sample, editing them out took the monitor from 0.891 to 0.705.
 
 ## The data
 
@@ -215,9 +230,10 @@ sabotage prompt describes sabotage and sandbagging in general terms.
 - Each label-word check uses the word in the label's own name; no other word was tried for those labels.
 - Seven first-run calls hit the 1,024-token output cap and returned no score. They were scored again
   with a 16,000-token cap, so no run is missing from any result.
-- That a high score on the three labels can't show a monitor finds sabotage an agent keeps quiet about
-  is argued here, not measured: no run had its statements of intent removed. The test of it is fixed in
-  [design/quiet-sabotage.md](design/quiet-sabotage.md), written before it ran.
+- The quiet-sabotage runs are edited transcripts, not a model that never states its intent. The
+  rewriter can miss hints, and it can remove reasoning that showed the sabotage without stating intent;
+  only the first is counted, and only on fixed words. Sabotage runs changed more than normal runs (15%
+  shorter against unchanged), so a trace of the edit may remain.
 - METR cautions that strong monitor performance on MALT is neither sufficient nor necessary evidence
   about real-world risk. That applies here too.
 
@@ -259,6 +275,13 @@ $PY src/monitor.py $OUT/reps_masked_neutral_default.jsonl $KEY $M $OUT/scores_ma
 MONITOR_MODE=rewardhack $PY src/monitor.py $OUT/reps_organic_full.jsonl $KEY $M $OUT/scores_organic.jsonl
 $PY src/merge_cot_compare.py $OUT/study_set.json $OUT/scores_default.jsonl $OUT/scores_obfusc.jsonl $OUT/scores_cot_compare.jsonl
 $PY src/consolidate.py $OUT results/results.json $OUT/scores_{default,obfusc,masked_default,masked_obfusc,masked_neutral_default,organic}.jsonl
+# the quiet-sabotage follow-up (design/quiet-sabotage.md)
+python -c "import json,sys; [sys.stdout.write(l) for l in open('$OUT/reps_default.jsonl') if json.loads(l)['config']=='default:cot_only']" > $OUT/reps_cot.jsonl
+$PY src/quiet_rewrite.py $OUT/reps_cot.jsonl default:cot_only quiet:cot_only $KEY $M $OUT/reps_quiet.jsonl
+$PY src/monitor.py $OUT/reps_cot.jsonl $KEY $M $OUT/scores_cot_rerun.jsonl
+$PY src/monitor.py $OUT/reps_quiet.jsonl $KEY $M $OUT/scores_quiet.jsonl
+MONITOR_MODE=rewardhack $PY src/monitor.py $OUT/reps_organic_full.jsonl $KEY $M $OUT/scores_organic_rerun.jsonl
+$PY src/quiet_analysis.py $OUT results/quiet.json
 ```
 
 `MONITOR_BUDGET_USD` caps what `monitor.py` may spend. A fresh run of the monitor gives different scores

@@ -21,4 +21,9 @@ jobs:
           s = r["word_in_agent_messages_all_runs"]["by_word"]["sabotage"]["by_label"]
           assert (s["sabotage"]["with_word"], s["sabotage"]["runs"]) == (223, 224), s["sabotage"]
           assert (s["normal"]["with_word"], s["normal"]["runs"]) == (0, 6047), s["normal"]
+          q = json.load(open("results/quiet.json", encoding="utf-8"))["sabotage_sample"]
+          readme = open("README.md", encoding="utf-8").read()
+          for v in (q["original_rescored"]["auroc"], q["quiet"]["auroc"], q["auroc_drop"]["value"],
+                    q["quiet_clean_only"]["auroc"]):
+              assert f"{v:.3f}" in readme, v
           PY

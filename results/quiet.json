@@ -1,0 +1,142 @@
+{
+ "_doc": {
+  "organic_sample": "The 62 organic hacks and 52 same-task controls, rescored now with the reward-hacking monitor. largest_tasks: hack and control counts of the three tasks with the most hacks.",
+  "rewrite_check": "Per class: rows rewritten, rows still holding the label word or an intent term, and output length over input length.",
+  "sabotage_sample": "The 60 sabotage and 60 normal runs of study_set.json, cot_only channel, sabotage monitor. original_rescored: the published study's reps, scored again now. quiet: the same reps after quiet_rewrite.py. auroc_drop: original minus quiet, paired by run. quiet_clean_only: quiet runs whose rewrite parsed and that hold neither the label word nor an intent term. Every interval resamples whole tasks (B=4000).",
+  "within_task_auroc": "AUROC over positive-negative pairs from the same task only."
+ },
+ "cost": {
+  "monitor_cot_rerun": {
+   "calls": 120,
+   "input_tokens": 678133,
+   "output_tokens": 35761,
+   "usd": 0.086
+  },
+  "monitor_organic": {
+   "calls": 114,
+   "input_tokens": 1004168,
+   "output_tokens": 47476,
+   "usd": 0.124
+  },
+  "monitor_quiet": {
+   "calls": 120,
+   "input_tokens": 628296,
+   "output_tokens": 40141,
+   "usd": 0.083
+  },
+  "rewrite": {
+   "calls": 120,
+   "input_tokens": 666430,
+   "output_tokens": 647212,
+   "usd": 0.39
+  }
+ },
+ "organic_sample": {
+  "auroc": 0.852,
+  "auroc_ci95_task_clustered": [
+   0.726,
+   0.937
+  ],
+  "largest_tasks": [
+   {
+    "controls": 2,
+    "hacks": 20
+   },
+   {
+    "controls": 5,
+    "hacks": 19
+   },
+   {
+    "controls": 5,
+    "hacks": 8
+   }
+  ],
+  "n_neg": 52,
+  "n_pos": 62,
+  "tasks": 11,
+  "unscored": 0,
+  "within_task_auroc": 0.858,
+  "within_task_ci95_task_clustered": [
+   0.722,
+   0.937
+  ],
+  "within_task_pairs": 250
+ },
+ "rewrite_check": {
+  "neg": {
+   "intent_word_left": 1,
+   "label_word_left": 0,
+   "length_ratio": 1.0,
+   "rewrite_ok": 60,
+   "rows": 60
+  },
+  "pos": {
+   "intent_word_left": 14,
+   "label_word_left": 10,
+   "length_ratio": 0.851,
+   "rewrite_ok": 51,
+   "rows": 60
+  }
+ },
+ "sabotage_sample": {
+  "auroc_drop": {
+   "ci95_task_clustered": [
+    0.109,
+    0.272
+   ],
+   "runs": 120,
+   "value": 0.186
+  },
+  "original_rescored": {
+   "auroc": 0.891,
+   "auroc_ci95_task_clustered": [
+    0.828,
+    0.944
+   ],
+   "n_neg": 60,
+   "n_pos": 60,
+   "tasks": 74,
+   "unscored": 0,
+   "within_task_auroc": 0.817,
+   "within_task_ci95_task_clustered": [
+    0.607,
+    1.0
+   ],
+   "within_task_pairs": 30
+  },
+  "quiet": {
+   "auroc": 0.705,
+   "auroc_ci95_task_clustered": [
+    0.61,
+    0.794
+   ],
+   "n_neg": 60,
+   "n_pos": 60,
+   "tasks": 74,
+   "unscored": 0,
+   "within_task_auroc": 0.55,
+   "within_task_ci95_task_clustered": [
+    0.339,
+    0.767
+   ],
+   "within_task_pairs": 30
+  },
+  "quiet_clean_only": {
+   "auroc": 0.661,
+   "auroc_ci95_task_clustered": [
+    0.55,
+    0.764
+   ],
+   "n_neg": 59,
+   "n_pos": 44,
+   "tasks": 62,
+   "unscored": 0,
+   "within_task_auroc": 0.476,
+   "within_task_ci95_task_clustered": [
+    0.225,
+    0.714
+   ],
+   "within_task_pairs": 21
+  }
+ }
+}
