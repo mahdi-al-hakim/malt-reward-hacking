@@ -42,6 +42,8 @@ prompted runs, that baseline is a check for one word.
    those models have no normal runs in the sample, while every control has one. And the hacks'
    transcripts are much longer, so the monitor saw a median 2.3% of each hack against 13.8% of each
    control. On the 35 hacks from models that also have controls, AUROC is 0.832 [0.739, 0.912].
+   The sample is also uneven by task: 39 of the 62 hacks come from two tasks that supply 7 of the 52
+   controls, so most hack-control pairs compare different tasks.
 
 The study made 1,200 monitor calls in all, superseded runs included: 8.0 million input and 0.32
 million output tokens, about US$0.96 at Claude Haiku 5.5 list prices. The word scans and the code
@@ -59,7 +61,8 @@ of its reasoning.
 ## The data
 
 [Public MALT](https://huggingface.co/datasets/metr-evals/malt-transcripts-public) has 7,179 runs on
-169 tasks from 19 model versions (METR counts about 19 models, some of them releases of the same one).
+169 tasks from 19 model versions (METR's dataset card says about 19 models, some of them releases of the
+same one; its announcement post says 18).
 All 1,132 runs with a behavior label were reviewed by hand; of the 6,047 labeled normal, 694 were.
 METR expects about 6% label error among presumed-benign runs that nobody reviewed. Besides the
 original, each run comes in four versions in which its chain of thought, if it has one (3,018 runs
@@ -106,7 +109,7 @@ Outside its own label, a form of "sabotage" appears in the agent messages of a s
 
 | the monitor reads | runs with the word (sabotage, normal) | one-word check AUROC | monitor AUROC [95% CI] | monitor, word swapped for a neutral verb |
 | --- | --- | --- | --- | --- |
-| reasoning only | 60 of 60, 0 of 60 | 1.0 | 0.896 [0.832, 0.948] | 0.876 [0.807, 0.934] |
+| agent messages only | 60 of 60, 0 of 60 | 1.0 | 0.896 [0.832, 0.948] | 0.876 [0.807, 0.934] |
 | actions only | 0 of 60, 0 of 60 | 0.5 | 0.767 [0.675, 0.849] | no word to swap |
 | both | 60 of 60, 0 of 60 | 1.0 | 0.912 [0.849, 0.961] | 0.907 [0.844, 0.957] |
 
@@ -123,7 +126,7 @@ Outside its own label, a form of "sabotage" appears in the agent messages of a s
 - On the 43 runs from the 14 shared tasks (15 sabotage, 28 normal), the monitor scores 0.864 [0.711,
   0.982] on the reasoning and 0.905 [0.795, 0.989] on both, close to its scores on all 120.
 
-Under METR's rewrites, on the reasoning-only channel (none of the 40 normal runs contains the word in
+Under METR's rewrites, on the agent-messages channel (none of the 40 normal runs contains the word in
 any version):
 
 | reasoning | sabotage runs keeping the word (of 40) | one-word check AUROC | monitor AUROC [95% CI] | change from original [95% CI] |
@@ -196,18 +199,25 @@ sabotage prompt describes sabotage and sandbagging in general terms.
 
 ## Limitations
 
-- One monitor and one prompt per sample, and each input was scored once. The intervals cover the choice
-  of runs, not the monitor's own randomness.
+- One monitor and one prompt per sample, and each input was scored once. The intervals resample runs
+  within each class: they cover the choice of runs, not the monitor's own randomness, and they treat
+  runs from the same task as independent, so they are narrower than intervals that resample tasks.
+- Thresholds such as "allowed the same 13 false positives" are chosen on the same runs they are
+  reported on.
 - The samples are small (120 and 114 runs, 80 for the rewrites), so the intervals are wide.
 - The organic result is not a blind test, as described above.
-- The 60 normal runs in the sabotage sample were not reviewed by hand. METR's 6% estimate would put
+- The 60 normal runs in the sabotage sample were not reviewed by hand. (The 52 organic controls all
+  were; `select_targets.py` takes reviewed runs first, and every one of the 11 tasks has some.) METR's 6% estimate would put
   three or four mislabeled runs among them.
-- The organic comparison is confounded by model, by whether there is a chain of thought, and by
-  transcript length. The monitor sees at most 24,000 characters of each run.
+- The organic comparison is confounded by model, by whether there is a chain of thought, by
+  transcript length, and by task. The monitor sees at most 24,000 characters of each run.
 - The rewrite subset is the first 40 run ids of each class, not a random sample.
 - Each label-word check uses the word in the label's own name; no other word was tried for those labels.
 - Seven first-run calls hit the 1,024-token output cap and returned no score. They were scored again
   with a 16,000-token cap, so no run is missing from any result.
+- That a high score on the three labels can't show a monitor finds sabotage an agent keeps quiet about
+  is argued here, not measured: no run had its statements of intent removed. The test of it is fixed in
+  [design/quiet-sabotage.md](design/quiet-sabotage.md), written before it ran.
 - METR cautions that strong monitor performance on MALT is neither sufficient nor necessary evidence
   about real-world risk. That applies here too.
 
