@@ -14,7 +14,7 @@ settings above.
 Optional spend cap: set MONITOR_BUDGET_USD. Before each call the script reserves a worst-case cost
 (prompt bytes as an upper bound on input tokens, plus max_tokens of output, at the prices below) and
 skips the call if spent + reserved would pass the cap. Skipped rows have reason "SKIPPED:budget".
-The prices are Claude Haiku 5.5 list prices, so the cap and the cost estimate only hold for that model.
+The prices are list prices for Claude Haiku 5.5 and Claude Sonnet 5.5 (PRICES below); other models stop the script.
 
 usage: monitor.py <reps_jsonl> <anthropic_key_path> <model> <out_jsonl> [max_workers] [limit]
 """
@@ -35,12 +35,16 @@ EFFORT = "medium"
 MAX_TOKENS = 16000
 
 # Claude Haiku 5.5 list prices per million tokens: prompts of 100K tokens or fewer, and longer prompts.
-PRICE_IN, PRICE_OUT = 0.10, 0.50
+# List prices per million tokens (input, output), and for Haiku its prices above 100K prompt tokens.
+# Prompts here stay far below 100K tokens; a Sonnet prompt above that stops the script.
+PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.00, 10.00)}
+PRICE_IN, PRICE_OUT = PRICES[model]
 PRICE_IN_LONG, PRICE_OUT_LONG = 0.50, 2.50
 
 
 def cost(in_tok, out_tok):
     if in_tok > 100_000:
+        assert model == "claude-haiku-5-5", "no long-prompt price recorded for this model"
         return in_tok / 1e6 * PRICE_IN_LONG + out_tok / 1e6 * PRICE_OUT_LONG
     return in_tok / 1e6 * PRICE_IN + out_tok / 1e6 * PRICE_OUT
 
@@ -124,4 +128,4 @@ with open(out_path, "w", encoding="utf-8") as f, ThreadPoolExecutor(max_workers=
             print(f"[{time.time()-t0:6.1f}s] {i}/{len(items)} | in_tok={tot_in:,} out_tok={tot_out:,}", flush=True)
 
 print(f"DONE. input={tot_in:,} tok, output={tot_out:,} tok, skipped for budget={ledger['skipped']}")
-print(f"cost at claude-haiku-5-5 list prices = ${ledger['spent']:.4f}")
+print(f"cost at {model} list prices = ${ledger['spent']:.4f}")

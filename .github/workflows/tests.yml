@@ -12,7 +12,7 @@ jobs:
       - name: Unit tests for the follow-up's statistics and parsing
         run: python -m pytest -q tests
       - name: No unused names or undefined names in the new scripts
-        run: python -m pyflakes src/quiet_lib.py src/quiet_rewrite.py src/quiet_analysis.py tests
+        run: python -m pyflakes src/quiet_lib.py src/quiet_rewrite.py src/quiet_analysis.py src/quiet_audit.py src/quiet_full_analysis.py tests
       - name: results.json parses and holds the headline counts
         run: |
           python - <<'PY'
