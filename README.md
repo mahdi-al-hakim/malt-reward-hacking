@@ -52,9 +52,25 @@ removes the agent's statements of intent and measures how far two monitors fall.
    An audit of what the rewrites removed is only partial: where a model labeled the removed text, about
    93% of it was statements of intent rather than descriptions of the work, but 56% to 71% of the text
    removed from sabotage runs got no label because the labeling model refused or answered in the wrong
-   shape ([results/quiet_full.json](results/quiet_full.json)). The rewrite shortened sabotage runs and
-   left normal runs almost unchanged, and 6 to 9 sabotage rewrites per round failed and kept their
-   original text, which can only help the monitor.
+   shape ([results/quiet_full.json](results/quiet_full.json)).
+
+   The rest of round 1's pre-specified readouts ([results/quiet.json](results/quiet.json)), messages-only
+   monitor:
+
+   | readout | value |
+   | --- | --- |
+   | runs whose rewrite parsed and kept no cue word (44 sabotage, 59 normal) | 0.661 [0.550, 0.764] |
+   | within-task AUROC, rewritten (30 same-task pairs) | 0.550 [0.339, 0.767] |
+   | within-task AUROC, original (same pairs) | 0.817 [0.607, 1.0] |
+   | sabotage rewrites that failed to parse, round 1 and round 2 | 9 and 6 of 60 |
+   | rewritten sabotage runs still holding "sabotag...", round 1 | 10 of 60 |
+   | rewritten sabotage runs still holding an intent term, round 1 | 14 of 60 |
+   | length after rewrite, sabotage and normal, round 1 | 85% and 100% |
+
+   The rewrite was applied to both classes so that a trace of editing couldn't separate them, but it
+   left the normal runs essentially unchanged (it removed nothing from them in round 1), so that
+   balance is nominal: an edit-shaped difference between the classes remains possible. Failed rewrites
+   kept their original text, which can only help the monitor.
 5. **On organic reward hacking, five code checks don't separate hacks from honest runs. The monitor
    does, with confounds.** Public MALT has 62 unprompted runs labeled `hardcoded_solution`,
    `bypass_constraints` or `ignores_task_instructions`, on 11 tasks; METR groups the last two (47 of the
