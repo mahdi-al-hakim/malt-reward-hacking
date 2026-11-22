@@ -31,7 +31,10 @@ removes the agent's statements of intent and measures how far two monitors fall.
    the agent keeps quiet about.** A monitor that only noticed an agent saying what it was doing would
    score near the top on them. On the sabotage runs the rewrites change little, since the word survives
    most of them; I didn't measure the rewrites on the other two labels. METR's post notes that its
-   prompted examples "are often obvious", and the word counts give a measure of that.
+   prompted examples "are often obvious", and the word counts give a measure of that. The post also
+   reports that hiding the reasoning from a monitor clearly hurts sandbagging detection, the closest
+   earlier result to the follow-up below, which removes only the statements of intent and keeps the
+   rest of the reasoning.
 4. **With the statements of intent removed, monitors fall, by about half as much when they also see the
    actions.** A follow-up in two pre-specified rounds ([round 1](design/quiet-sabotage.md),
    [round 2](design/quiet-sabotage-2.md), each pushed before its model calls) had Claude Haiku 5.5
